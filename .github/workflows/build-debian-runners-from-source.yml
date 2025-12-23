@@ -183,6 +183,20 @@ jobs:
             exit 1
           fi
 
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: task-runner-dist
+          path: n8n-source/dist
+          retention-days: 1
+
+      - name: Upload packages artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: task-runner-packages
+          path: n8n-source/packages
+          retention-days: 1
+
   # Step 4: 构建 Debian 镜像（多架构）
   build-debian-runners:
     name: Build Debian Runners
@@ -196,62 +210,24 @@ jobs:
       - name: Checkout this repository
         uses: actions/checkout@v4
 
-      - name: Checkout n8n source
-        uses: actions/checkout@v4
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
         with:
-          repository: ${{ needs.get-latest-version.outputs.source_repo }}
-          ref: ${{ needs.get-latest-version.outputs.n8n_tag }}
-          path: n8n-source
-          sparse-checkout: |
-            package.json
-            pnpm-workspace.yaml
-            pnpm-lock.yaml
-            turbo.json
-            .npmrc
-            patches/
-            scripts/
-            src/
-            packages/
-            tsconfig.json
-          sparse-checkout-cone-mode: false
+          name: task-runner-dist
+          path: dist
 
-      - name: Read pnpm version from source
-        id: pnpm-version
-        working-directory: n8n-source
-        run: |
-          PACKAGE_MANAGER=$(node -p "require('./package.json').packageManager")
-          PNPM_VERSION=$(echo "$PACKAGE_MANAGER" | sed 's/pnpm@//')
-          echo "pnpm-version=$PNPM_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download packages artifacts
+        uses: actions/download-artifact@v4
         with:
-          node-version: 22
+          name: task-runner-packages
+          path: packages
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ steps.pnpm-version.outputs.pnpm-version }}
-
-      - name: Install dependencies
-        working-directory: n8n-source
+      - name: Verify artifacts
         run: |
-          echo "Installing dependencies with pnpm..."
-          pnpm install --frozen-lockfile=false
-
-      - name: Build n8n
-        working-directory: n8n-source
-        run: |
-          echo "Building n8n..."
-          pnpm build:n8n
-
-      - name: Setup paths for Docker build
-        run: |
-          # Copy dist to current directory for Dockerfile
-          cp -r n8n-source/dist dist
-          # Create symlink so Dockerfile.debian can find packages
-          ln -s n8n-source/packages packages
-          echo "Setup complete"
+          echo "Downloaded artifacts:"
+          ls -la dist/
+          ls -la dist/task-runner-javascript/
+          ls -la packages/@n8n/
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
