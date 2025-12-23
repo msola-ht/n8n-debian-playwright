@@ -423,21 +423,30 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           mkdir -p /tmp/images
 
-          # 拉取并导出 Debian amd64
-          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64
+          # 使用 buildx 拉取并导出特定平台的镜像
+          # Debian amd64
+          docker pull --platform=linux/amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64
           docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 -o /tmp/images/n8n-runners-debian-amd64.tar
+          docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
 
-          # 拉取并导出 Debian arm64
-          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64
+          # Debian arm64
+          docker pull --platform=linux/arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64
           docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 -o /tmp/images/n8n-runners-debian-arm64.tar
+          docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
 
-          # 拉取并导出 Playwright amd64
-          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64
+          # Playwright amd64
+          docker pull --platform=linux/amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64
           docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 -o /tmp/images/n8n-runners-playwright-amd64.tar
+          docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
 
-          # 拉取并导出 Playwright arm64
-          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64
+          # Playwright arm64
+          docker pull --platform=linux/arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64
           docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 -o /tmp/images/n8n-runners-playwright-arm64.tar
+          docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
 
           ls -la /tmp/images
 
@@ -574,21 +583,30 @@ jobs:
           VERSION="${{ needs.get-latest-version.outputs.n8n_version }}"
           mkdir -p /tmp/images
 
-          # 拉取并导出 Debian amd64
-          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64
+          # 使用 buildx 拉取并导出特定平台的镜像
+          # Debian amd64
+          docker pull --platform=linux/amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64
           docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 -o /tmp/images/n8n-runners-debian-amd64.tar
+          docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
 
-          # 拉取并导出 Debian arm64
-          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64
+          # Debian arm64
+          docker pull --platform=linux/arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64
           docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 -o /tmp/images/n8n-runners-debian-arm64.tar
+          docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
 
-          # 拉取并导出 Playwright amd64
-          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64
+          # Playwright amd64
+          docker pull --platform=linux/amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64
           docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 -o /tmp/images/n8n-runners-playwright-amd64.tar
+          docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
 
-          # 拉取并导出 Playwright arm64
-          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64
+          # Playwright arm64
+          docker pull --platform=linux/arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
+          docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64
           docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 -o /tmp/images/n8n-runners-playwright-arm64.tar
+          docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
 
           ls -la /tmp/images
 
