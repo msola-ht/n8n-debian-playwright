@@ -124,6 +124,19 @@ jobs:
           echo "Current tag:"
           git describe --tags --exact-match 2>/dev/null || echo "no tag"
 
+      - name: Read pnpm version from source
+        id: pnpm-version
+        working-directory: n8n-source
+        run: |
+          # 读取 packageManager 字段，格式为 "pnpm@x.x.x"
+          PACKAGE_MANAGER=$(node -p "require('./package.json').packageManager")
+          echo "packageManager: $PACKAGE_MANAGER"
+
+          # 提取版本号
+          PNPM_VERSION=$(echo "$PACKAGE_MANAGER" | sed 's/pnpm@//')
+          echo "pnpm-version=$PNPM_VERSION" >> $GITHUB_OUTPUT
+          echo "Detected pnpm version: $PNPM_VERSION"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -132,7 +145,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.22.0
+          version: ${{ steps.pnpm-version.outputs.pnpm-version }}
 
       - name: Install dependencies
         working-directory: n8n-source
