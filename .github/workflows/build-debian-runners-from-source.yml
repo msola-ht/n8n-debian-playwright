@@ -12,6 +12,11 @@ on:
         required: false
         default: false
         type: boolean
+      release_only:
+        description: 'Only create release (skip build)'
+        required: false
+        default: false
+        type: boolean
   schedule:
     # 每天检查一次新版本 (UTC 时间 00:00)
     - cron: '0 0 * * *'
@@ -378,6 +383,90 @@ jobs:
           docker buildx imagetools rm ${IMAGE_NAME}:${VERSION}-amd64 || true
           docker buildx imagetools rm ${IMAGE_NAME}:${VERSION}-arm64 || true
           echo "✅ Temporary tags cleaned up!"
+
+  # Step 7.5: 仅发布 Release（手动触发，跳过构建）
+  release-only:
+    name: Release Only (Skip Build)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_only == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Get version from input
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.n8n_version }}" ]; then
+            VERSION="${{ github.event.inputs.n8n_version }}"
+            VERSION=$(echo "$VERSION" | sed -E 's/^(v|n8n@)//')
+          else
+            # 获取最新版本
+            LATEST_RELEASE=$(curl -sL "https://api.github.com/repos/n8n-io/n8n/releases/latest" \
+              -H "Accept: application/vnd.github.v3+json")
+            VERSION=$(echo "$LATEST_RELEASE" | jq -r '.tag_name' | sed -E 's/^(v|n8n@)//')
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Creating release for version: $VERSION"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-debian
+          name: n8n Runners v${{ steps.version.outputs.version }} (Debian + Playwright)
+          body: |
+            ## Features
+            - Based on Debian 11 bullseye-slim
+            - Built from n8n-io/n8n official source v${{ steps.version.outputs.version }}
+            - Multi-architecture support: amd64, arm64
+
+            ## Available Images
+
+            ### Base Debian Image
+            - `${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ steps.version.outputs.version }}` (amd64 + arm64)
+
+            ### Playwright Extended Image
+            - `${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ steps.version.outputs.version }}` (amd64 + arm64)
+
+            Includes: `playwright` + `markdown` Python packages
+
+            ## Source
+            - Built from: https://github.com/n8n-io/n8n/releases/tag/v${{ steps.version.outputs.version }}
+
+            ## Usage
+
+            ### Base Debian Image
+            ```bash
+            docker run -d \
+              -e N8N_RUNNERS_AUTH_TOKEN=your-token \
+              -e N8N_RUNNERS_TASK_BROKER_URI=http://your-n8n:5679 \
+              -p 5680:5680 \
+              ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ steps.version.outputs.version }}
+            ```
+
+            ### Playwright Image (with browser automation support)
+            ```bash
+            docker run -d \
+              -e N8N_RUNNERS_AUTH_TOKEN=your-token \
+              -e N8N_RUNNERS_TASK_BROKER_URI=http://your-n8n:5679 \
+              -p 5680:5680 \
+              ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ steps.version.outputs.version }}
+            ```
+
+            ## Pull Commands
+            ```bash
+            # Pull base image
+            docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ steps.version.outputs.version }}
+
+            # Pull playwright image
+            docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ steps.version.outputs.version }}
+            ```
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Step 8: 创建 GitHub Release
   create-release:
