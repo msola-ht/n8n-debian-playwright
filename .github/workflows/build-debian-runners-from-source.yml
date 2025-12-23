@@ -272,6 +272,14 @@ jobs:
             N8N_RELEASE_TYPE=stable
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/n8n-runners-debian-${{ needs.get-latest-version.outputs.n8n_version }}-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: n8n-runners-debian-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/n8n-runners-debian-${{ needs.get-latest-version.outputs.n8n_version }}-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}.tar
+          retention-days: 7
 
   # Step 5: 创建多架构 manifest
   create-manifest:
@@ -347,6 +355,14 @@ jobs:
             ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ needs.get-latest-version.outputs.n8n_version }}-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/n8n-runners-playwright-${{ needs.get-latest-version.outputs.n8n_version }}-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}.tar
+
+      - name: Upload Playwright image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: n8n-runners-playwright-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/n8n-runners-playwright-${{ needs.get-latest-version.outputs.n8n_version }}-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}.tar
+          retention-days: 7
 
   # Step 7: 创建 Playwright 多架构 manifest
   create-playwright-manifest:
@@ -417,27 +433,27 @@ jobs:
           tag_name: v${{ steps.version.outputs.version }}-debian
           name: n8n Runners v${{ steps.version.outputs.version }} (Debian + Playwright)
           body: |
-            ## Features
-            - Based on Debian 11 bullseye-slim
-            - Built from n8n-io/n8n official source v${{ steps.version.outputs.version }}
-            - Multi-architecture support: amd64, arm64
+            ## 特性
+            - 基于 Debian 11 bullseye-slim
+            - 从 n8n-io/n8n 官方源码构建 v${{ steps.version.outputs.version }}
+            - 多架构支持：amd64、arm64
 
-            ## Available Images
+            ## 可用镜像
 
-            ### Base Debian Image
+            ### Debian 基础镜像
             - `${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ steps.version.outputs.version }}` (amd64 + arm64)
 
-            ### Playwright Extended Image
+            ### Playwright 扩展镜像
             - `${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ steps.version.outputs.version }}` (amd64 + arm64)
 
-            Includes: `playwright` + `markdown` Python packages
+            包含：`playwright` + `markdown` Python 包
 
-            ## Source
-            - Built from: https://github.com/n8n-io/n8n/releases/tag/v${{ steps.version.outputs.version }}
+            ## 源码
+            - 构建自：https://github.com/n8n-io/n8n/releases/tag/v${{ steps.version.outputs.version }}
 
-            ## Usage
+            ## 使用方法
 
-            ### Base Debian Image
+            ### Debian 基础镜像
             ```bash
             docker run -d \
               -e N8N_RUNNERS_AUTH_TOKEN=your-token \
@@ -446,7 +462,7 @@ jobs:
               ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ steps.version.outputs.version }}
             ```
 
-            ### Playwright Image (with browser automation support)
+            ### Playwright 镜像（支持浏览器自动化）
             ```bash
             docker run -d \
               -e N8N_RUNNERS_AUTH_TOKEN=your-token \
@@ -455,12 +471,12 @@ jobs:
               ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ steps.version.outputs.version }}
             ```
 
-            ## Pull Commands
+            ## 拉取镜像
             ```bash
-            # Pull base image
+            # 拉取基础镜像
             docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ steps.version.outputs.version }}
 
-            # Pull playwright image
+            # 拉取 playwright 镜像
             docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ steps.version.outputs.version }}
             ```
           draft: false
@@ -480,33 +496,70 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download Debian image artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: n8n-runners-debian-*
+          path: /tmp/images
+          merge-multiple: false
+
+      - name: Download Playwright image artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: n8n-runners-playwright-*
+          path: /tmp/images
+          merge-multiple: false
+
+      - name: Rename image files
+        run: |
+          cd /tmp/images
+          for dir in */; do
+            dir="${dir%/}"
+            mv "$dir"/* "${dir}.tar" 2>/dev/null || true
+          done
+          ls -la
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.get-latest-version.outputs.n8n_version }}-debian
           name: n8n Runners v${{ needs.get-latest-version.outputs.n8n_version }} (Debian + Playwright)
           body: |
-            ## Features
-            - Based on Debian 11 bullseye-slim
-            - Built from n8n-io/n8n official source v${{ needs.get-latest-version.outputs.n8n_version }}
-            - Multi-architecture support: amd64, arm64
+            ## 特性
+            - 基于 Debian 11 bullseye-slim
+            - 从 n8n-io/n8n 官方源码构建 v${{ needs.get-latest-version.outputs.n8n_version }}
+            - 多架构支持：amd64、arm64
 
-            ## Available Images
+            ## 可用镜像
 
-            ### Base Debian Image
+            ### Debian 基础镜像
             - `${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ needs.get-latest-version.outputs.n8n_version }}` (amd64 + arm64)
 
-            ### Playwright Extended Image
+            ### Playwright 扩展镜像
             - `${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ needs.get-latest-version.outputs.n8n_version }}` (amd64 + arm64)
 
-            Includes: `playwright` + `markdown` Python packages
+            包含：`playwright` + `markdown` Python 包
 
-            ## Source
-            - Built from: https://github.com/n8n-io/n8n/releases/tag/v${{ needs.get-latest-version.outputs.n8n_version }}
+            ## 离线安装
 
-            ## Usage
+            下载下方 tar 文件并加载：
 
-            ### Base Debian Image
+            ```bash
+            # 加载 Debian 基础镜像
+            docker load -i n8n-runners-debian-amd64.tar
+            docker load -i n8n-runners-debian-arm64.tar
+
+            # 加载 Playwright 镜像
+            docker load -i n8n-runners-playwright-amd64.tar
+            docker load -i n8n-runners-playwright-arm64.tar
+            ```
+
+            ## 源码
+            - 构建自：https://github.com/n8n-io/n8n/releases/tag/v${{ needs.get-latest-version.outputs.n8n_version }}
+
+            ## 使用方法
+
+            ### Debian 基础镜像
             ```bash
             docker run -d \
               -e N8N_RUNNERS_AUTH_TOKEN=your-token \
@@ -515,7 +568,7 @@ jobs:
               ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ needs.get-latest-version.outputs.n8n_version }}
             ```
 
-            ### Playwright Image (with browser automation support)
+            ### Playwright 镜像（支持浏览器自动化）
             ```bash
             docker run -d \
               -e N8N_RUNNERS_AUTH_TOKEN=your-token \
@@ -524,15 +577,16 @@ jobs:
               ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ needs.get-latest-version.outputs.n8n_version }}
             ```
 
-            ## Pull Commands
+            ## 拉取镜像
             ```bash
-            # Pull base image
+            # 拉取基础镜像
             docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${{ needs.get-latest-version.outputs.n8n_version }}
 
-            # Pull playwright image
+            # 拉取 playwright 镜像
             docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ needs.get-latest-version.outputs.n8n_version }}
             ```
           draft: false
           prerelease: false
+          files: /tmp/images/*.tar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
