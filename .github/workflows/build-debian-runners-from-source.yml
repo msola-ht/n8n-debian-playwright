@@ -111,6 +111,10 @@ jobs:
             package.json
             pnpm-workspace.yaml
             pnpm-lock.yaml
+            turbo.json
+            .npmrc
+            patches/
+            scripts/
             src/
             packages/
             tsconfig.json
