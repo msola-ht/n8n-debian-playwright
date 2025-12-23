@@ -311,12 +311,6 @@ jobs:
           echo "📍 Image: ${IMAGE_NAME}:${VERSION}"
           echo "📍 Multi-arch support: amd64, arm64"
 
-          # 清理临时架构特定标签
-          echo "🧹 Cleaning up temporary tags..."
-          docker buildx imagetools rm ${IMAGE_NAME}:${VERSION}-amd64 || true
-          docker buildx imagetools rm ${IMAGE_NAME}:${VERSION}-arm64 || true
-          echo "✅ Temporary tags cleaned up!"
-
   # Step 6: 构建 Playwright 镜像（多架构）
   build-playwright-runners:
     name: Build Playwright Runners
@@ -393,12 +387,6 @@ jobs:
           echo "✅ Playwright Manifests created successfully!"
           echo "📍 Image: ${IMAGE_NAME}:${VERSION}"
           echo "📍 Multi-arch support: amd64, arm64"
-
-          # 清理临时架构特定标签
-          echo "🧹 Cleaning up temporary tags..."
-          docker buildx imagetools rm ${IMAGE_NAME}:${VERSION}-amd64 || true
-          docker buildx imagetools rm ${IMAGE_NAME}:${VERSION}-arm64 || true
-          echo "✅ Temporary tags cleaned up!"
 
   # Step 7.5: 仅发布 Release（手动触发，从 Docker Hub 拉取镜像）
   release-only:
