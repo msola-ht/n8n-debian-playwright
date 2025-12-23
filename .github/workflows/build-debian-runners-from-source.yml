@@ -400,9 +400,9 @@ jobs:
           docker buildx imagetools rm ${IMAGE_NAME}:${VERSION}-arm64 || true
           echo "✅ Temporary tags cleaned up!"
 
-  # Step 7.5: 仅发布 Release（手动触发，跳过构建）
+  # Step 7.5: 仅发布 Release（手动触发，从 Docker Hub 拉取镜像）
   release-only:
-    name: Release Only (Skip Build)
+    name: Release Only (Pull from Docker Hub)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_only == 'true'
     permissions:
@@ -427,6 +427,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull and export images from Docker Hub
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p /tmp/images
+
+          # 拉取并导出 Debian amd64
+          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 -o /tmp/images/n8n-runners-debian-amd64.tar
+
+          # 拉取并导出 Debian arm64
+          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 -o /tmp/images/n8n-runners-debian-arm64.tar
+
+          # 拉取并导出 Playwright amd64
+          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 -o /tmp/images/n8n-runners-playwright-amd64.tar
+
+          # 拉取并导出 Playwright arm64
+          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 -o /tmp/images/n8n-runners-playwright-arm64.tar
+
+          ls -la /tmp/images
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -447,6 +473,20 @@ jobs:
             - `${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${{ steps.version.outputs.version }}` (amd64 + arm64)
 
             包含：`playwright` + `markdown` Python 包
+
+            ## 离线安装
+
+            下载下方 tar 文件并加载：
+
+            ```bash
+            # 加载 Debian 基础镜像
+            docker load -i n8n-runners-debian-amd64.tar
+            docker load -i n8n-runners-debian-arm64.tar
+
+            # 加载 Playwright 镜像
+            docker load -i n8n-runners-playwright-amd64.tar
+            docker load -i n8n-runners-playwright-arm64.tar
+            ```
 
             ## 源码
             - 构建自：https://github.com/n8n-io/n8n/releases/tag/v${{ steps.version.outputs.version }}
@@ -481,6 +521,7 @@ jobs:
             ```
           draft: false
           prerelease: false
+          files: /tmp/images/*.tar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -497,20 +538,36 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Debian image artifacts
+        id: download-debian
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: n8n-runners-debian-*
           path: /tmp/images
           merge-multiple: false
 
       - name: Download Playwright image artifacts
+        id: download-playwright
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: n8n-runners-playwright-*
           path: /tmp/images
           merge-multiple: false
 
+      - name: Check if artifacts exist
+        id: check-artifacts
+        run: |
+          if [ -d "/tmp/images" ] && [ "$(ls -A /tmp/images)" ]; then
+            echo "has_artifacts=true" >> $GITHUB_OUTPUT
+            echo "Found build artifacts"
+          else
+            echo "has_artifacts=false" >> $GITHUB_OUTPUT
+            echo "No artifacts found, will pull from Docker Hub"
+          fi
+
       - name: Rename image files
+        if: steps.check-artifacts.outputs.has_artifacts == 'true'
         run: |
           cd /tmp/images
           for dir in */; do
@@ -518,6 +575,34 @@ jobs:
             mv "$dir"/* "${dir}.tar" 2>/dev/null || true
           done
           ls -la
+
+      - name: Set up Docker Buildx
+        if: steps.check-artifacts.outputs.has_artifacts == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull and export images from Docker Hub
+        if: steps.check-artifacts.outputs.has_artifacts == 'false'
+        run: |
+          VERSION="${{ needs.get-latest-version.outputs.n8n_version }}"
+          mkdir -p /tmp/images
+
+          # 拉取并导出 Debian amd64
+          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 -o /tmp/images/n8n-runners-debian-amd64.tar
+
+          # 拉取并导出 Debian arm64
+          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 -o /tmp/images/n8n-runners-debian-arm64.tar
+
+          # 拉取并导出 Playwright amd64
+          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 -o /tmp/images/n8n-runners-playwright-amd64.tar
+
+          # 拉取并导出 Playwright arm64
+          docker pull ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 -o /tmp/images/n8n-runners-playwright-arm64.tar
+
+          ls -la /tmp/images
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
