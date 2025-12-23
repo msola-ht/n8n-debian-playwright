@@ -190,11 +190,21 @@ jobs:
           path: n8n-source/dist
           retention-days: 1
 
-      - name: Upload packages artifacts
+      - name: Create packages archive without node_modules
+        run: |
+          # 创建临时目录
+          mkdir -p /tmp/packages-clean
+          # 复制 packages 目录，排除 node_modules
+          rsync -av --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='dist' \
+            n8n-source/packages/ /tmp/packages-clean/
+
+      - name: Upload packages artifacts (without node_modules)
         uses: actions/upload-artifact@v4
         with:
           name: task-runner-packages
-          path: n8n-source/packages
+          path: /tmp/packages-clean
           retention-days: 1
 
   # Step 4: 构建 Debian 镜像（多架构）
