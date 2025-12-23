@@ -101,30 +101,38 @@ jobs:
     if: needs.check-image.outputs.should_build == 'true'
 
     steps:
-      - name: Clone n8n repository
+      - name: Checkout n8n repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.get-latest-version.outputs.source_repo }}
+          ref: ${{ needs.get-latest-version.outputs.n8n_version }}
+          path: n8n-source
+          sparse-checkout: |
+            package.json
+            pnpm-workspace.yaml
+            pnpm-lock.yaml
+            src/
+            packages/
+            tsconfig.json
+          sparse-checkout-cone-mode: false
+
+      - name: Show current commit
+        working-directory: n8n-source
         run: |
-          REPO="${{ needs.get-latest-version.outputs.source_repo }}"
-          VERSION="${{ needs.get-latest-version.outputs.n8n_version }}"
-
-          echo "Cloning ${REPO}..."
-          git clone https://github.com/${REPO}.git n8n-source
-
-          echo "Checking out version tag: v${VERSION}"
-          cd n8n-source
-          git checkout "v${VERSION}" || git checkout "${VERSION}"
-
           echo "Current commit:"
           git log -1 --oneline
+          echo "Current tag:"
+          git describe --tags --exact-match 2>/dev/null || echo "no tag"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Setup pnpm
+      - name: Setup pnpm (auto-detect from source)
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          setup_dependencies_file: true
 
       - name: Install dependencies
         working-directory: n8n-source
