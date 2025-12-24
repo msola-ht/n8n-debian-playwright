@@ -427,25 +427,25 @@ jobs:
           # Debian amd64
           docker pull --platform=linux/amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
           docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64
-          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 -o /tmp/images/n8n-runners-debian-amd64.tar
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 -o /tmp/images/n8n-runners-debian-${VERSION}-amd64.tar
           docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
 
           # Debian arm64
           docker pull --platform=linux/arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
           docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64
-          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 -o /tmp/images/n8n-runners-debian-arm64.tar
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 -o /tmp/images/n8n-runners-debian-${VERSION}-arm64.tar
           docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
 
           # Playwright amd64
           docker pull --platform=linux/amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
           docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64
-          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 -o /tmp/images/n8n-runners-playwright-amd64.tar
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 -o /tmp/images/n8n-runners-playwright-${VERSION}-amd64.tar
           docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
 
           # Playwright arm64
           docker pull --platform=linux/arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
           docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64
-          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 -o /tmp/images/n8n-runners-playwright-arm64.tar
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 -o /tmp/images/n8n-runners-playwright-${VERSION}-arm64.tar
           docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
 
           ls -la /tmp/images
@@ -477,12 +477,12 @@ jobs:
 
             ```bash
             # 加载 Debian 基础镜像
-            docker load -i n8n-runners-debian-amd64.tar
-            docker load -i n8n-runners-debian-arm64.tar
+            docker load -i n8n-runners-debian-${{ steps.version.outputs.version }}-amd64.tar
+            docker load -i n8n-runners-debian-${{ steps.version.outputs.version }}-arm64.tar
 
             # 加载 Playwright 镜像
-            docker load -i n8n-runners-playwright-amd64.tar
-            docker load -i n8n-runners-playwright-arm64.tar
+            docker load -i n8n-runners-playwright-${{ steps.version.outputs.version }}-amd64.tar
+            docker load -i n8n-runners-playwright-${{ steps.version.outputs.version }}-arm64.tar
             ```
 
             ## 源码
@@ -566,10 +566,13 @@ jobs:
       - name: Rename image files
         if: steps.check-artifacts.outputs.has_artifacts == 'true'
         run: |
+          VERSION="${{ needs.get-latest-version.outputs.n8n_version }}"
           cd /tmp/images
           for dir in */; do
             dir="${dir%/}"
-            mv "$dir"/* "${dir}.tar" 2>/dev/null || true
+            # 提取镜像类型和架构 (例如: n8n-runners-debian-amd64)
+            # 移动并重命名文件，在架构前插入版本号
+            mv "$dir"/* "$(echo $dir | sed "s/-\(amd64\|arm64\)/-$VERSION-\1/")".tar 2>/dev/null || true
           done
           ls -la
 
@@ -587,25 +590,25 @@ jobs:
           # Debian amd64
           docker pull --platform=linux/amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
           docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64
-          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 -o /tmp/images/n8n-runners-debian-amd64.tar
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 -o /tmp/images/n8n-runners-debian-${VERSION}-amd64.tar
           docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
 
           # Debian arm64
           docker pull --platform=linux/arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
           docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64
-          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 -o /tmp/images/n8n-runners-debian-arm64.tar
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 -o /tmp/images/n8n-runners-debian-${VERSION}-arm64.tar
           docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}-arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-debian:${VERSION}
 
           # Playwright amd64
           docker pull --platform=linux/amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
           docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64
-          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 -o /tmp/images/n8n-runners-playwright-amd64.tar
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 -o /tmp/images/n8n-runners-playwright-${VERSION}-amd64.tar
           docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-amd64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
 
           # Playwright arm64
           docker pull --platform=linux/arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
           docker tag ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION} ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64
-          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 -o /tmp/images/n8n-runners-playwright-arm64.tar
+          docker save ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 -o /tmp/images/n8n-runners-playwright-${VERSION}-arm64.tar
           docker rmi ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}-arm64 ${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright:${VERSION}
 
           ls -la /tmp/images
@@ -637,12 +640,12 @@ jobs:
 
             ```bash
             # 加载 Debian 基础镜像
-            docker load -i n8n-runners-debian-amd64.tar
-            docker load -i n8n-runners-debian-arm64.tar
+            docker load -i n8n-runners-debian-${{ needs.get-latest-version.outputs.n8n_version }}-amd64.tar
+            docker load -i n8n-runners-debian-${{ needs.get-latest-version.outputs.n8n_version }}-arm64.tar
 
             # 加载 Playwright 镜像
-            docker load -i n8n-runners-playwright-amd64.tar
-            docker load -i n8n-runners-playwright-arm64.tar
+            docker load -i n8n-runners-playwright-${{ needs.get-latest-version.outputs.n8n_version }}-amd64.tar
+            docker load -i n8n-runners-playwright-${{ needs.get-latest-version.outputs.n8n_version }}-arm64.tar
             ```
 
             ## 源码
