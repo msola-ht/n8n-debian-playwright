@@ -534,6 +534,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Update README.md version
+        run: |
+          VERSION="${{ needs.get-latest-version.outputs.n8n_version }}"
+          # 更新 README.md 中的版本号
+          if [ -f "README.md" ]; then
+            # 替换所有镜像标签中的版本号
+            sed -i "s|lunare/n8n-runners-debian:[0-9.]*|lunare/n8n-runners-debian:${VERSION}|g" README.md
+            sed -i "s|lunare/n8n-runners-playwright:[0-9.]*|lunare/n8n-runners-playwright:${VERSION}|g" README.md
+            echo "Updated README.md with version: ${VERSION}"
+            cat README.md
+          fi
+
+      - name: Commit README.md update
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add README.md
+          git commit -m "chore: update README version to ${{ needs.get-latest-version.outputs.n8n_version }}" || echo "No changes to commit"
+          git push || echo "No changes to push"
+
       - name: Download Debian image artifacts
         id: download-debian
         uses: actions/download-artifact@v4
@@ -568,12 +588,19 @@ jobs:
         run: |
           VERSION="${{ needs.get-latest-version.outputs.n8n_version }}"
           cd /tmp/images
-          for dir in */; do
-            dir="${dir%/}"
-            # 提取镜像类型和架构 (例如: n8n-runners-debian-amd64)
-            # 移动并重命名文件，在架构前插入版本号
-            mv "$dir"/* "$(echo $dir | sed "s/-\(amd64\|arm64\)/-$VERSION-\1/")".tar 2>/dev/null || true
+
+          # 遍历所有 tar 文件并重命名
+          # artifact 下载后的文件名格式为：n8n-runners-{type}-{arch}.tar
+          # 需要重命名为：n8n-runners-{type}-{version}-{arch}.tar
+          for file in *.tar; do
+            if [ -f "$file" ]; then
+              # 使用 sed 在架构名称前插入版本号
+              new_name=$(echo "$file" | sed "s/-\(amd64\|arm64\)\.tar/-$VERSION-\1.tar/")
+              mv "$file" "$new_name"
+              echo "Renamed: $file -> $new_name"
+            fi
           done
+
           ls -la
 
       - name: Set up Docker Buildx
