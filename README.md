@@ -15,10 +15,10 @@
 
 ```bash
 # 拉取基础镜像
-docker pull lunare/n8n-runners-debian:2.1.2
+docker pull lunare/n8n-runners-debian:2.1.4
 
 # 拉取 Playwright 镜像
-docker pull lunare/n8n-runners-playwright:2.1.2
+docker pull lunare/n8n-runners-playwright:2.1.4
 ```
 
 ### 运行
@@ -28,7 +28,7 @@ docker run -d \
   -e N8N_RUNNERS_AUTH_TOKEN=your-token \
   -e N8N_RUNNERS_TASK_BROKER_URI=http://your-n8n:5679 \
   -p 5680:5680 \
-  lunare/n8n-runners-debian:2.1.2
+  lunare/n8n-runners-debian:2.1.4
 ```
 
 ### 离线安装
