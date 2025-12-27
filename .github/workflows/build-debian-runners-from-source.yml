@@ -12,6 +12,11 @@ on:
         required: false
         default: false
         type: boolean
+      force_rebuild_playwright:
+        description: 'Force rebuild Playwright image'
+        required: false
+        default: false
+        type: boolean
       release_only:
         description: 'Only create release (skip build)'
         required: false
@@ -311,11 +316,48 @@ jobs:
           echo "📍 Image: ${IMAGE_NAME}:${VERSION}"
           echo "📍 Multi-arch support: amd64, arm64"
 
+  # Step 5.5: 检查 Playwright 镜像是否已存在
+  check-playwright-image:
+    name: Check Playwright Docker Hub Image
+    runs-on: ubuntu-latest
+    needs: [get-latest-version, create-manifest]
+    if: |
+      always() &&
+      needs.create-manifest.result == 'success' &&
+      github.event.inputs.force_rebuild_playwright != 'true'
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+
+    steps:
+      - name: Check if Playwright image exists
+        id: check
+        run: |
+          IMAGE_NAME="${{ env.DOCKERHUB_USERNAME }}/n8n-runners-playwright"
+          VERSION="${{ needs.get-latest-version.outputs.n8n_version }}"
+
+          echo "Checking if ${IMAGE_NAME}:${VERSION} exists..."
+
+          # 检查镜像是否存在
+          if docker manifest inspect ${IMAGE_NAME}:${VERSION} >/dev/null 2>&1; then
+            echo "Image ${IMAGE_NAME}:${VERSION} already exists"
+            echo "Skipping Playwright build"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "Image ${IMAGE_NAME}:${VERSION} does not exist, proceeding with build"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
   # Step 6: 构建 Playwright 镜像（多架构）
   build-playwright-runners:
     name: Build Playwright Runners
     runs-on: ubuntu-latest
-    needs: [get-latest-version, create-manifest]
+    needs: [get-latest-version, create-manifest, check-playwright-image]
+    if: |
+      always() &&
+      (
+        github.event.inputs.force_rebuild_playwright == 'true' ||
+        needs.check-playwright-image.result == 'success' && needs.check-playwright-image.outputs.should_build == 'true'
+      )
     strategy:
       matrix:
         platform: [linux/amd64, linux/arm64]
@@ -362,6 +404,12 @@ jobs:
   create-playwright-manifest:
     runs-on: ubuntu-latest
     needs: [get-latest-version, build-playwright-runners]
+    if: |
+      always() &&
+      (
+        github.event.inputs.force_rebuild_playwright == 'true' ||
+        needs.build-playwright-runners.result == 'success'
+      )
 
     steps:
       - name: Set up Docker Buildx
@@ -526,7 +574,10 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     needs: [get-latest-version, create-playwright-manifest]
-    if: (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
+    if: |
+      always() &&
+      (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main') &&
+      needs.create-playwright-manifest.result == 'success'
     permissions:
       contents: write
 
